@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch Video Me</title>
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+    <style>
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            height: 0;
+            overflow: hidden;
+        }
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        /* Popup Styles */
+        .popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0; 
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        .popup-box {
+            background: #fff;
+            padding: 24px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            animation: slideUp 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .popup-box h2 {
+            margin-top: 0;
+            font-size: 20px;
+            color: #333;
+        }
+        
+        .popup-box p {
+            font-size: 15px;
+            color: #555;
+            margin: 16px 0;
+        }
+        
+        .popup-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        
+        .popup-buttons button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+        
+        .popup-buttons button:first-child {
+            background: #e0e0e0;
+            color: #333;
+        }
+        
+        .popup-buttons button:last-child {
+            background: #ff3c5f;
+            color: #fff;
+        }
+        
+        .popup-buttons button:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body class="bg-gray-200">
+    <div class="max-w-4xl mx-auto p-6">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">Player Video Sederhana</h1>
+            <p class="text-gray-600 mt-2">Choose a video that makes you curious and enjoy the video</p>
+        </header>
+
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            <!-- Video Player -->
+            <div class="video-container">
+                <iframe id="videoPlayer" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+
+            <!-- Video Info -->
+            <div class="p-6">
+                <h2 id="videoTitle" class="text-xl font-semibold text-gray-800">Video 1: Contoh Video</h2>
+                <p id="videoDesc" class="text-gray-600 mt-2">Ini adalah deskripsi contoh video pertama.</p>
+            </div>
+            
+            <!-- Popup Overlay -->
+            <div id="popup-overlay" class="popup-overlay">
+                <div class="popup-box">
+                    <h2>Age Confirmation ❗</h2>
+                    <p>This video contains mature content, Are you 18+ and want to continue?</p>
+                    <div class="popup-buttons">
+                        <button onclick="closePopup(false)">BATAL</button>
+                        <!-- Ganti # dengan link tujuan Anda -->
+                        <button onclick="window.location.href='https://contoh-link-iklan.com'">LANJUT</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Navigation Buttons -->
+            <div class="flex justify-between p-4 bg-gray-50 border-t border-gray-200">
+                <button id="prevBtn" class="px-2 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    Sebelumnya
+                </button>
+                <button id="nextBtn" class="px-2 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                    Selanjutnya
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Daftar video
+        const videos = [
+            {
+                id: "NQ99RjTVbys?si",
+                title: "Video 1: Contoh Video Pertama",
+                desc: "Ini adalah contoh video pertama yang bisa Anda tonton."
+            },
+            {
+                id: "JGwWNGJdvx8",
+                title: "Video 3: Contoh Video Ketiga",
+                desc: "Video ketiga ini menampilkan konten yang lebih menarik.",
+                redirectUrl: "joingrup.html" // URL tujuan khusus untuk video ke-3
+            }
+        ];
+
+        // Elemen DOM
+        const videoPlayer = document.getElementById('videoPlayer');
+        const videoTitle = document.getElementById('videoTitle');
+        const videoDesc = document.getElementById('videoDesc');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const popupOverlay = document.getElementById('popup-overlay');
+
+        // Variabel state
+        let currentVideoIndex = 0;
+        let popupInterval;
+        let isPopupShowing = false;
+
+        // Fungsi untuk memuat video
+        function loadVideo(index) {
+            const video = videos[index];
+            
+            // Jika video terakhir dan memiliki redirectUrl
+            if (index === videos.length - 1 && video.redirectUrl) {
+                window.location.href = video.redirectUrl;
+                return;
+            }
+            
+            videoPlayer.src = `https://www.youtube.com/embed/${video.id}?autoplay=1&enablejsapi=1`;
+            videoTitle.textContent = video.title;
+            videoDesc.textContent = video.desc;
+            
+            // Update state tombol
+            prevBtn.disabled = index === 0;
+            nextBtn.disabled = index === videos.length - 1;
+            
+            // Reset popup state
+            clearInterval(popupInterval);
+            isPopupShowing = false;
+            popupOverlay.style.display = 'none';
+            
+            // Mulai interval popup baru
+            startPopupInterval();
+        }
+
+        // Fungsi untuk menutup popup
+        function closePopup() {
+            popupOverlay.style.display = 'none';
+            isPopupShowing = false;
+            // Video akan terus diputar karena autoplay=1 sudah aktif
+            
+            // Mulai timer untuk popup berikutnya
+            startPopupInterval();
+        }
+
+        // Fungsi untuk memulai interval popup
+        function startPopupInterval() {
+            clearInterval(popupInterval); // Hentikan interval sebelumnya
+            popupInterval = setInterval(() => {
+                if (!isPopupShowing) {
+                    popupOverlay.style.display = "flex";
+                    isPopupShowing = true;
+                    clearInterval(popupInterval); // Hentikan interval saat popup muncul
+                }
+            }, 5000); // Muncul setiap 5 detik
+        }
+
+        // Event listeners untuk tombol
+        prevBtn.addEventListener('click', () => {
+            if (currentVideoIndex > 0) {
+                currentVideoIndex--;
+                loadVideo(currentVideoIndex);
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (currentVideoIndex < videos.length - 1) {
+                currentVideoIndex++;
+                loadVideo(currentVideoIndex);
+            }
+        });
+
+        // Load video pertama saat halaman dimuat
+        loadVideo(currentVideoIndex);
+
+        // Untuk kontrol video YouTube yang lebih baik (opsional)
+        // Tambahkan script ini di head: <script src="https://www.youtube.com/iframe_api">
+    </script>
+</body>
+</html>
